@@ -10,6 +10,9 @@ table {
   width: 100%;
 }
 
+table tr > * {
+  padding: 0.3em;
+}
 table tr > th {
   vertical-align: baseline;
 }
@@ -26,7 +29,7 @@ tr.header > th {
 th.date-header {
   /*font-size: 120%;*/
   text-align: left;
-  padding: 0.3em 0.1em;
+  /*padding: 0.3em 0.1em;*/
 }
 th.project-header {
   /*font-size: 110%;*/
@@ -35,13 +38,13 @@ th.project-header {
 }
 
 table tr > *.duration { text-align: center; }
-table tr > *.span { font-size: 80%; min-width: 6em; white-space: no-wrap; text-align: center; }
+table tr > *.rate     { text-align: right; }
+table tr > *.total    { text-align: right; }
+table tr > *.span     { font-size: 80%; min-width: 6em; white-space: no-wrap; text-align: center; }
 
 /* Indenting */
 table tr > td:first-child  { min-width: 1.5em; }
 table tr > td:nth-child(2) { min-width: 1.5em; }
 
-table tr > td.task {
-  width: 100%;  
-}
+table tr > td.task { width: 100%; }
 

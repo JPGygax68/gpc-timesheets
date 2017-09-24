@@ -104,8 +104,8 @@ def get_customer_by_name(name):
 
 def generate_billing_sheet(args):
 
-    MAX_SPANS_PER_TASK = 5        
-    NB_OF_COLUMNS = 1 + 1 + 1 + 1 + MAX_SPANS_PER_TASK
+    MAX_SPANS_PER_TASK = 5
+    NB_OF_COLUMNS = 6 + MAX_SPANS_PER_TASK
         
     def timesheet_rows(customer_id, user):
 
@@ -125,8 +125,11 @@ def generate_billing_sheet(args):
             if len(span_list) > 0: # total_dur > timedelta():
                 #print("generating task row, span_list:", len(span_list))
                 complete_spans(span_list)
-                yield tr( td(), td(), td(class_='task')(last_event.task if not last_event.task is None else '(allgemein)'), 
-                    td(class_='duration')('{:02}:{:02}'.format(total_dur.seconds // 3600, (total_dur.seconds // 60) % 60)), 
+                yield tr( td(), td(), 
+                    td(class_='task')(last_event.task if not last_event.task is None else '(allgemein)'), 
+                    td(class_='duration')('{:02}:{:02}'.format(total_dur.seconds // 3600, (total_dur.seconds // 60) % 60)),
+                    td(class_='rate')(int(last_event.hourly_rate)),
+                    td(class_='total')('{:.2f}'.format((total_dur.seconds / 3600) * last_event.hourly_rate)),
                     *span_list )
             total_dur = timedelta()
             span_list = []
@@ -194,7 +197,7 @@ def generate_billing_sheet(args):
             table(
                 thead( 
                     tr(class_='header')(
-                        th(colspan=3)('Datum, Projekt, Aufgabe'), th('Dauer'), 
+                        th(colspan=3)('Datum, Projekt, Aufgabe'), th('Dauer'), th('Ansatz'), th('Total'),
                         *[th(class_='span')('Per.\u00A0'+str(i+1)) for i in range(MAX_SPANS_PER_TASK)]
                     )
                 ),
