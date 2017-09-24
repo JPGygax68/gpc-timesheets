@@ -24,10 +24,6 @@ APPLICATION_NAME = 'GPC Timesheets'
 
 ACCOUNT_ID = 243645
 
-MAX_SPANS_PER_TASK = 5
-    
-NB_OF_COLUMNS = 1 + 1 + 1 + 1 + MAX_SPANS_PER_TASK
-    
 config = None
 
 # Generic routines ------------------------------------------------------------
@@ -46,6 +42,34 @@ def get_user_from_account(account_id):
         if user.account_id == ACCOUNT_ID:
             return user
     raise Exception("Could not find user from account ID")
+
+# Configuration ---------------------------------------------------------------
+
+def get_update_config():
+    """Read, update and write config file (username and password for now)"""
+
+    home_dir = os.path.expanduser('~')
+    config_dir = os.path.join(home_dir, '.gpc-timesheets')
+    config_file = os.path.join(config_dir, 'parameters.cfg')
+    if os.path.exists(config_file):
+        print("Config file found, reading...")
+        config = ConfigObj(config_file)
+    else:
+        config = ConfigObj()
+        config.filename = config_file
+        config['authentication'] = { 'username': getpass.getuser() }
+    auth = config['authentication']
+
+    if auth['username'] is None:
+        auth['username'] = input_default('Username: ', config['authentication']['username'])
+        pwd = getpass.getpass('Password: ')
+        if pwd: # keep previous password if entered empty
+            auth['password'] = pwd  # TODO: encrypt password ?
+        if not os.path.exists(config_dir): os.makedirs(config_dir)
+        config.write()
+        print("Configuration written to \"%s\"" % config.filename)
+        
+    return config
 
 
 # REST transactions -----------------------------------------------------------
@@ -80,6 +104,9 @@ def get_customer_by_name(name):
 
 def generate_billing_sheet(args):
 
+    MAX_SPANS_PER_TASK = 5        
+    NB_OF_COLUMNS = 1 + 1 + 1 + 1 + MAX_SPANS_PER_TASK
+        
     def timesheet_rows(customer_id, user):
 
         def complete_spans(list_ = []):
@@ -153,11 +180,15 @@ def generate_billing_sheet(args):
         print('(Customer ID: %s)' % customer.id)
         
     # Generate HTML file (TODO: open in "print" mode)
+    css_file = os.path.join(os.path.dirname(__file__), 'data', 'style.css')
+    with open(css_file) as f:
+        css_text = f.read()
     
     code = html(
         head(
             title('Gearbeitete Zeit'), # TODO: more information
-            link(rel='stylesheet', href='style.css'),
+            #link(rel='stylesheet', href='style.css'),
+            style(type='text/css')(Safe(css_text))
         ),
         body(
             table(
@@ -179,7 +210,6 @@ def generate_billing_sheet(args):
 # Main routine ----------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description='GPC time tracking commands')
-#parser.add_argument('command', nargs='?', const='customers')
 subparsers = parser.add_subparsers()
 
 #p_customers = subparsers.add_parser('customers')
@@ -191,60 +221,11 @@ p_billing.set_defaults(func=generate_billing_sheet)
 args = parser.parse_args()
 #print('command:', args.command)
 
-# Read, update and write config file (username and password for now)
-
-home_dir = os.path.expanduser('~')
-config_dir = os.path.join(home_dir, '.gpc-timesheets')
-config_file = os.path.join(config_dir, 'parameters.cfg')
-if os.path.exists(config_file):
-    print("Config file found, reading...")
-    config = ConfigObj(config_file)
-else:
-    config = ConfigObj()
-    config.filename = config_file
-    config['authentication'] = { 'username': getpass.getuser() }
-auth = config['authentication']
-
-if auth['username'] is None:
-    auth['username'] = input_default('Username: ', config['authentication']['username'])
-    pwd = getpass.getpass('Password: ')
-    if pwd: # keep previous password if entered empty
-        auth['password'] = pwd  # TODO: encrypt password ?
-
-    if not os.path.exists(config_dir): os.makedirs(config_dir)
-    config.write()
-    print("Configuration written to \"%s\"" % config.filename)
+config = get_update_config()
 
 # Execute specified subcommand
 
-args.func(args)
-
-if False:
-    # Branch into subcommand
-
-    if args.command is None or args.command == 'customers':
-        print("customers")
-
-    elif args.command == 'billing':
-        print("customer_name_or_id:", args.customer_name_or_id)
-        #print("Username:", auth['username'])
-        #print("Password:", auth['password'])
-
-    sys.exit(0)
-
-
-
-
-
-#users = json.loads(response.text)['data']
-#print(json.dumps(users, indent=4))
-
-if False:
-    for user in users:
-        #print(user['name'] + ' ' + user['surname'])    
-        u2 = namedtuple('User', user.keys())(**user)
-        print(u2)
-        #print(u2)
-        print(u2.name + ' ' + u2.surname)
-
-
+if hasattr(args, 'func'):
+    args.func(args)
+else:
+    print('No command given, doing nothing')
