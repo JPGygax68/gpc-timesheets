@@ -143,7 +143,7 @@ def generate_billing_sheet(args):
                 #print("new date")
                 for _ in generate_task_row(): yield _
                 yield tr(
-                    th(class_='date-header', colspan=NB_OF_COLUMNS)(format_date(tss.date(), format='long', locale='de_CH')) 
+                    th(class_='date-header', colspan=NB_OF_COLUMNS)(format_date(tss.date(), format='EEEE, d.M.yyyy', locale='de_CH')) 
                         # TODO: obtain locale from somewhere! (and make it overridable ?)
                 )
                 last_date = tss.date()
