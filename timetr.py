@@ -12,6 +12,9 @@ from collections import namedtuple
 from pyhtml import *
 from datetime import datetime, date, time, timedelta
 from babel.dates import format_date, format_time
+import webbrowser
+
+from lib.query_yes_no import query_yes_no
 
 
 BASE_URL = 'https://app.trackingtime.co/api/v4/'
@@ -85,7 +88,8 @@ def get_events(customer_id, user_id):
         event = namedtuple('Event', event.keys())(**event)
         if event.user_id == user_id:
             if event.customer_id == customer_id:
-                yield event
+                if not event.is_billed:
+                    yield event
     
 def get_customer_by_name(name):
     auth = config['authentication']
@@ -99,6 +103,11 @@ def get_customer_by_name(name):
             return cust
     raise Exception('No customer found under the name "%s"' % name)
     
+def set_event_billed(id):
+    auth = config['authentication']
+    response = requests.get(BASE_URL+str(ACCOUNT_ID)+'/events/update/'+str(id)+'?is_billed=true', 
+        auth=(auth['username'], auth['password']))
+    response.raise_for_status()
 
 # "Billing sheet" implementation ----------------------------------------------
 
@@ -170,7 +179,7 @@ def generate_billing_sheet(args):
             total_dur += dur
         for _ in generate_task_row(): yield _
         # Total row
-        print('total_dur:', total_dur)
+        #print('total_dur:', total_dur)
         tot_hours = total_dur.days * 24 + total_dur.seconds // 3600
         rem_minutes = total_dur.seconds // 60 % 60
         yield tr(class_='total')(
@@ -224,9 +233,22 @@ def generate_billing_sheet(args):
         )
     )
 
+    out_filename = 'output/timesheet.html'
     s = str(code)
-    with open('output/timesheet.html', 'w', encoding='utf-8') as f:
+    with open(out_filename, 'w', encoding='utf-8') as f:
         f.write(s)
+        
+    # Open file in web browser
+    webbrowser.open("file://"+os.path.abspath(out_filename), new = 2)
+    
+    # Mark as billed ?
+    if args.mark_billed:
+        if query_yes_no('Do you really want to mark all events as billed ?') == 'yes':
+            n = 0
+            for e in get_events(customer.id, user.id):
+                set_event_billed(e.id)
+                n += 1
+            print("{:d} events marked as billed".format(n))
     
 # Main routine ----------------------------------------------------------------
 
@@ -237,6 +259,7 @@ subparsers = parser.add_subparsers()
 
 p_billing = subparsers.add_parser('billing', description='Generate timesheet for specific customer from TrackingTime data')
 p_billing.add_argument('customer_name_or_id', help='Customer name or ID')
+p_billing.add_argument('--mark-billed', action='store_true', help='Mark events as billed once timesheet has been generated')
 p_billing.set_defaults(func=generate_billing_sheet)
 
 args = parser.parse_args()
