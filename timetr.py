@@ -22,7 +22,7 @@ SCOPES = BASE_URL # 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'GPC Timesheets'
 
-ACCOUNT_ID = 243645
+ACCOUNT_ID = 243645 # TODO: obtain via authentication data
 
 config = None
 
@@ -100,7 +100,7 @@ def get_customer_by_name(name):
     raise Exception('No customer found under the name "%s"' % name)
     
 
-# "Billing" implementation ----------------------------------------------------
+# "Billing sheet" implementation ----------------------------------------------
 
 def generate_billing_sheet(args):
 
@@ -117,21 +117,26 @@ def generate_billing_sheet(args):
         last_project = None
         last_task_id = -1
         last_event = None
+        day_dur = timedelta()
         total_dur = timedelta()
+        total_amount = 0.0
         span_list = []
 
         def generate_task_row():
-            nonlocal last_event, span_list, total_dur
-            if len(span_list) > 0: # total_dur > timedelta():
+            nonlocal last_event, span_list, day_dur, total_amount
+            if len(span_list) > 0: # day_dur > timedelta():
                 #print("generating task row, span_list:", len(span_list))
                 complete_spans(span_list)
+                rate = 0 if last_event.hourly_rate is None else last_event.hourly_rate
+                amount = (day_dur.seconds / 3600) * rate
+                total_amount += amount
                 yield tr( td(), td(), 
                     td(class_='task')(last_event.task if not last_event.task is None else '(allgemein)'), 
-                    td(class_='duration')('{:02}:{:02}'.format(total_dur.seconds // 3600, (total_dur.seconds // 60) % 60)),
-                    td(class_='rate')(int(last_event.hourly_rate)),
-                    td(class_='total')('{:.2f}'.format((total_dur.seconds / 3600) * last_event.hourly_rate)),
+                    td(class_='duration')('{:02}:{:02}'.format(day_dur.seconds // 3600, (day_dur.seconds // 60) % 60)),
+                    td(class_='rate')(int(rate)),
+                    td(class_='amount')('{:.2f}'.format(amount)),
                     *span_list )
-            total_dur = timedelta()
+            day_dur = timedelta()
             span_list = []
             
         for e in get_events(customer_id, user.id):
@@ -161,8 +166,20 @@ def generate_billing_sheet(args):
             span_list.append(td(class_='span')(format_time(tss, 'HH:mm') + '\N{NON-BREAKING HYPHEN}' + format_time(tse, 'HH:mm')))
             # For next iteration
             last_event = e
+            day_dur += dur
             total_dur += dur
         for _ in generate_task_row(): yield _
+        # Total row
+        print('total_dur:', total_dur)
+        tot_hours = total_dur.days * 24 + total_dur.seconds // 3600
+        rem_minutes = total_dur.seconds // 60 % 60
+        yield tr(class_='total')(
+            td(colspan=3)('TOTAL'), 
+            td(class_='duration')('{:d}:{:02d}'.format(tot_hours, rem_minutes)),
+            td(), 
+            td(class_='amount')('{:.2f}'.format(total_amount)),
+            td(colspan=MAX_SPANS_PER_TASK)()
+        )
 
     #print("generate_billing_sheet")
     
@@ -189,6 +206,7 @@ def generate_billing_sheet(args):
     
     code = html(
         head(
+            meta(charset='utf-8'),
             title('Gearbeitete Zeit'), # TODO: more information
             #link(rel='stylesheet', href='style.css'),
             style(type='text/css')(Safe(css_text))

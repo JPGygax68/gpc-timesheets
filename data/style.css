@@ -38,9 +38,16 @@ th.project-header {
   padding: 0.2em 0.1em;
 }
 
+table tr.total > * { 
+  font-weight: bold; 
+  border-top: solid 1px black; 
+  font-size: 110%;
+  text-decoration: double underline;
+}
+
 table tr > *.duration { text-align: center; }
 table tr > *.rate     { text-align: right; }
-table tr > *.total    { text-align: right; }
+table tr > *.amount   { text-align: right; }
 table tr > *.span     { font-size: 80%; min-width: 6em; white-space: no-wrap; text-align: center; }
 
 /* Indenting */
