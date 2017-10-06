@@ -81,7 +81,9 @@ def get_events(customer_id, user_id):
     auth = config['authentication']
     response = requests.get(BASE_URL+str(ACCOUNT_ID)+'/events', 
         auth=(auth['username'], auth['password']), 
-        params = {'filter': 'USER', 'id': user_id, 'from': '2017-01-01', 'to': '2017-09-30'})
+        params = {'filter': 'USER', 'id': user_id, 'from': '1970-01-01', 'to': '2999-12-31'}
+            # TODO: the above filter should try to avoid re-scanning too far back in time
+    )
     response.raise_for_status()
     events = json.loads(response.text)['data']
     for event in events:
@@ -153,6 +155,7 @@ def generate_billing_sheet(args):
             tse = datetime.strptime(e.end  , '%Y-%m-%d %H:%M:%S')
             dur = tse - tss
             #print("project:", last_project, "task id:", last_task_id, "durations:", len(span_list))
+            #print("start: ", tss)
             if tss.date() != last_date:
                 #print("new date")
                 for _ in generate_task_row(): yield _
