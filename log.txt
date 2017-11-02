@@ -3,6 +3,8 @@
 
 - TODO: Error messages are printed with a stack trace - can that be suppressed ?
 
+- TODO: task comments absolutely must be printed, whereas start and stop times are not really required
+
 
 2017-09-24
 ==========

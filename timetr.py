@@ -17,6 +17,29 @@ import webbrowser
 from lib.query_yes_no import query_yes_no
 
 
+# Translations ----------------------------------------------------------------
+
+t = {
+    'HDR_DATE_PROJECT_TASK': {
+        'de_CH': 'Datum, Projekt, Aufgabe',
+        'fr_CH': 'Date, Projet, Tâche',
+    },
+    'HDR_DURATION': {
+        'de_CH': 'Dauer',
+        'fr_CH': 'Durée',
+    },
+    'HDR_RATE': {
+        'de_CH': 'Ansatz',
+        'fr_CH': 'Taux',
+    },
+    'PAGE_TITLE': {
+        'de_CH': 'Geleistete Arbeit',
+        'fr_CH': 'Travail effectué',
+    },
+}
+
+# Constant data ---------------------------------------------------------------
+
 BASE_URL = 'https://app.trackingtime.co/api/v4/'
 
 # If modifying these scopes, delete your previously saved credentials
@@ -123,7 +146,7 @@ def set_event_billed(id):
 
 def generate_billing_sheet(args):
 
-    print("locale: %s" % args.locale)
+    locale = args.locale
 
     MAX_SPANS_PER_TASK = 5
     NB_OF_COLUMNS = 6 + MAX_SPANS_PER_TASK
@@ -229,7 +252,7 @@ def generate_billing_sheet(args):
     code = html(
         head(
             meta(charset='utf-8'),
-            title('Gearbeitete Zeit'), # TODO: more information
+            title(t['PAGE_TITLE'][locale]), # TODO: more information
             #link(rel='stylesheet', href='style.css'),
             style(type='text/css')(Safe(css_text))
         ),
@@ -237,7 +260,8 @@ def generate_billing_sheet(args):
             table(
                 thead( 
                     tr(class_='header')(
-                        th(colspan=3)('Datum, Projekt, Aufgabe'), th('Dauer'), th('Ansatz'), th('Total'),
+                        th(colspan=3)(t['HDR_DATE_PROJECT_TASK'][locale]), 
+                        th(t['HDR_DURATION'][locale]), th(t['HDR_RATE'][locale]), th('Total'),
                         *[th(class_='span')('Per.\u00A0'+str(i+1)) for i in range(MAX_SPANS_PER_TASK)]
                     )
                 ),
