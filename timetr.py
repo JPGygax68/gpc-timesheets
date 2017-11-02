@@ -46,11 +46,11 @@ def get_user_from_account(account_id):
             return user
     raise Exception("Could not find user from account ID")
 
-# Configuration ---------------------------------------------------------------
+# Configuration file ----------------------------------------------------------
 
-def get_update_config():
-    """Read, update and write config file (username and password for now)"""
+# TODO: would it be feasible and better to derive from ConfigObj and implement this functionality as methods ?
 
+def read_configuration_file():
     home_dir = os.path.expanduser('~')
     config_dir = os.path.join(home_dir, '.gpc-timesheets')
     config_file = os.path.join(config_dir, 'parameters.cfg')
@@ -60,19 +60,27 @@ def get_update_config():
     else:
         config = ConfigObj()
         config.filename = config_file
+    return config
+
+def configuration_set_defaults(config):
+    if not 'locale' in config:
+        config['locale'] = 'de_CH'
+
+def write_configuration_file(config):
+    if not os.path.exists(config_dir): os.makedirs(config_dir)
+    config.write()
+    print("Configuration written to \"%s\"" % config.filename)
+
+def get_or_input_authentication_info(config):
+    if not 'authentication' in config:
         config['authentication'] = { 'username': getpass.getuser() }
     auth = config['authentication']
-
-    if auth['username'] is None:
+    if not 'username' in auth:
         auth['username'] = input_default('Username: ', config['authentication']['username'])
         pwd = getpass.getpass('Password: ')
         if pwd: # keep previous password if entered empty
             auth['password'] = pwd  # TODO: encrypt password ?
-        if not os.path.exists(config_dir): os.makedirs(config_dir)
-        config.write()
-        print("Configuration written to \"%s\"" % config.filename)
-        
-    return config
+        write_configuration_file()
 
 
 # REST transactions -----------------------------------------------------------
@@ -114,6 +122,8 @@ def set_event_billed(id):
 # "Billing sheet" implementation ----------------------------------------------
 
 def generate_billing_sheet(args):
+
+    print("locale: %s" % args.locale)
 
     MAX_SPANS_PER_TASK = 5
     NB_OF_COLUMNS = 6 + MAX_SPANS_PER_TASK
@@ -160,8 +170,8 @@ def generate_billing_sheet(args):
                 #print("new date")
                 for _ in generate_task_row(): yield _
                 yield tr(
-                    th(class_='date-header', colspan=NB_OF_COLUMNS)(format_date(tss.date(), format='EEEE, d.M.yyyy', locale='de_CH')) 
-                        # TODO: obtain locale from somewhere! (and make it overridable ?)
+                    th(class_='date-header', colspan=NB_OF_COLUMNS)(
+                        format_date(tss.date(), format='EEEE, d.M.yyyy', locale=args.locale).capitalize()) 
                 )
                 last_date = tss.date()
                 last_project = None;
@@ -255,7 +265,11 @@ def generate_billing_sheet(args):
     
 # Main routine ----------------------------------------------------------------
 
+config = read_configuration_file()
+configuration_set_defaults(config)
+
 parser = argparse.ArgumentParser(description='GPC time tracking commands')
+parser.add_argument('--locale, -l', dest='locale', default=config['locale'])
 subparsers = parser.add_subparsers()
 
 #p_customers = subparsers.add_parser('customers')
@@ -268,7 +282,7 @@ p_billing.set_defaults(func=generate_billing_sheet)
 args = parser.parse_args()
 #print('command:', args.command)
 
-config = get_update_config()
+get_or_input_authentication_info(config)
 
 # Execute specified subcommand
 

@@ -1,3 +1,9 @@
+2017-11-02
+==========
+
+- TODO: Error messages are printed with a stack trace - can that be suppressed ?
+
+
 2017-09-24
 ==========
 
